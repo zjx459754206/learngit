@@ -1,0 +1,136 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Nov 10 14:00:44 2017
+
+@author: Administrator
+"""
+from numpy import*
+import operator 
+
+def createDataSet():
+    group = array([[1.0,1.1],[1.0,1.0],[0,0],[0,0.1]])
+    labels = ["A","A","B","B"]
+    return group,labels
+
+
+# kNN算法
+# 首先计算已知类别数据集中的点到当前点的距离；
+# 按照距离从小到大进行排序；
+# 选取与当前点距离最小的k个点；
+# 确定前k个点所在类别出现的频率；
+# 返回前k个点出现频率最高的类别作为当前点的预测分类。
+    
+
+def classify0(inX,dataset,labels,k):
+    #inX为待判点，dataset为训练样本集，labels为标签向量
+    datasetsize = dataset.shape[0]   #训练集样本个数
+    diffmat = tile(inX,(datasetsize,1))-dataset  #待判点和训练数据对应特征的差的矩阵
+    sqdiffmat = diffmat**2 #矩阵中每个元素进行平方
+    sqdistance = sqdiffmat.sum(axis=1) #行元素的平方和
+    distance = sqdistance**0.5  #得到待判点与数据集中每个点的欧氏距离
+    sorteddistIndicies = distance.argsort()   #对距离进行排序
+    classcount={}   #选择距离最小的k个点
+    for i in range(k):
+        voteIlabel = labels[sorteddistIndicies[i]]
+        classcount[voteIlabel] = classcount.get(voteIlabel,0)+1
+    sortedclasscount = sorted(classcount.items(),
+                              key=operator.itemgetter(1),reverse=True)
+    return sortedclasscount[0][0]
+    
+    
+#示例：使用kNN算法改进约会网站的配对效果    
+# 准备数据：从文本文件中解析数据
+# 将文本记录转换为NumPy的解析程序
+def file2matrix(filename):
+    fr = open(filename)
+    arrayolines = fr.readlines()  
+    numberoflines = len(arrayolines)  #得到文件行数
+    returnmat = zeros((numberoflines,3))  #创建返回的NumPy矩阵
+    classlabelvector = []
+    index = 0
+    for line in arrayolines:
+        line = line.strip()  #截取掉所有的回车字符
+        listfromline = line.split('\t')  #将上一步得到的数据分割成一个元素列表
+        returnmat[index,:]=listfromline[0:3]
+        classlabelvector.append(int(listfromline[-1]))
+        index+=1
+    return returnmat,classlabelvector
+
+import kNN
+datingdatamat,datinglabels=kNN.file2matrix('datingTestSet.txt')
+        
+        
+# 分析数据：使用Matplotlib创建散点图
+import matplotlib
+import matplotlib.pyplot as plt
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.scatter(datingdatamat[:,1],datingdatamat[:,2])
+ax.scatter(datingdatamat[:,1],datingdatamat[:,2],
+           15.0*array(datinglabels),15.0*array(datinglabels))
+    
+    
+ #准备数据：归一化特征值
+def autoNorm(dataset):
+    minvals = dataset.min(0)  #每列的最小值，得到1行3列的数据
+    maxvals = dataset.max(0)  #每列的最大值
+    ranges = maxvals - minvals
+    normdataset = zeros(shape(dataset))  #将数据集中的每个元素变成0
+    m = dataset.shape[0]    #数据集的行数， dataset.shape[1]为数据集的列数
+    normdataset = dataset - tile(minvals,(m,1))
+    normdataset = normdataset/tile(ranges,(m,1))
+    return normdataset,minvals,maxvals,ranges
+
+# 测试算法：作为完整程序验证分类器
+# 分类器针对约会网站的测试代码
+# 前10%的数据为测试数据，后90%的数据为训练数据
+    
+def datingclasstest():
+    datingdatamat,datinglabels=kNN.file2matrix('datingTestSet.txt')
+    normdataset,minvals,maxvals,ranges=kNN.autoNorm(datingdatamat)
+    m = normdataset.shape[0]  #数据集的行数
+    horatio = 0.10
+    numtestvecs = int(m*horatio)  #测试集为数据集的前10%
+    errorcount = 0.0
+    for i in range(numtestvecs):
+        classifierresult = classify0(normdataset[i,:],normdataset[numtestvecs:m,:],\
+                                     datinglabels[numtestvecs:m],3)
+        print("the classifier came back with:%d,the real answer is:%d"\
+              %(classifierresult,datinglabels[i]))
+        if(classifierresult != datinglabels[i]):
+            errorcount+=1.0
+        print("the total error rate is:%f" %(errorcount/float(numtestvecs)))
+      
+#使用算法：构建完整可用系统
+# 约会网站预测函数
+def classifyperson():
+    resultlist = ["not at all","in small doses","in large doses"]
+    percenttats = float(input("Percentage of time spent playing video games?"))
+    ffmiles= float(input("frequent flier miles earned per year?"))
+    icecream = float(input("liters of ice cream consumed per year?"))
+    datingdatamat,datinglabels=kNN.file2matrix('datingTestSet.txt')
+    normdataset,minvals,maxvals,ranges=kNN.autoNorm(datingdatamat)
+    inArr = array([ffmiles,percenttats,icecream])
+    classifierresult = classify0(inArr-minvals/ranges,normdataset,datinglabels,3)
+    print("you will probably like this person:%s" %(resultlist[classifierresult-1]))
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
